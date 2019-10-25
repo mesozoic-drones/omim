@@ -1,6 +1,7 @@
 #pragma once
 
 #include "routing/segment.hpp"
+#include "track_analyzing/track_analyzer/track_type_handler.hpp"
 
 #include "routing_common/num_mwm_id.hpp"
 
@@ -40,16 +41,11 @@ using MwmToMatchedTracks = std::unordered_map<routing::NumMwmId, UserToMatchedTr
 class TrackFilter final
 {
 public:
-  TrackFilter(uint64_t minDuration, double minLength, double minSpeed, double maxSpeed,
-              bool ignoreTraffic);
+  TrackFilter(TrackParams && params);
 
   bool Passes(uint64_t duration, double length, double speed, bool hasTrafficPoints) const;
 
 private:
-  uint64_t const m_minDuration;
-  double const m_minLength;
-  double const m_minSpeed;
-  double const m_maxSpeed;
-  bool const m_ignoreTraffic;
+  TrackParams m_params;
 };
 }  // namespace track_analyzing

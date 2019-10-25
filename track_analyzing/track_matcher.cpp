@@ -4,9 +4,8 @@
 
 #include "routing/city_roads.hpp"
 #include "routing/index_graph_loader.hpp"
-#include "routing/maxspeeds.hpp"
 
-#include "routing_common/car_model.hpp"
+#include "routing_common/vehicle_model.hpp"
 
 #include "indexer/scales.hpp"
 
@@ -54,10 +53,11 @@ namespace track_analyzing
 {
 // TrackMatcher ------------------------------------------------------------------------------------
 TrackMatcher::TrackMatcher(storage::Storage const & storage, NumMwmId mwmId,
-                           platform::CountryFile const & countryFile)
+                           platform::CountryFile const & countryFile, string const & trackType)
   : m_mwmId(mwmId)
-  , m_vehicleModel(CarModelFactory({}).GetVehicleModelForCountry(countryFile.GetName()))
 {
+  routing::VehicleType curType = GetVehicleType(trackType);
+  m_vehicleModel = GetVehicleModel(curType, countryFile.GetName());
   auto localCountryFile = storage.GetLatestLocalFile(countryFile);
   CHECK(localCountryFile, ("Can't find latest country file for", countryFile.GetName()));
   auto registerResult = m_dataSource.Register(*localCountryFile);
@@ -65,13 +65,14 @@ TrackMatcher::TrackMatcher(storage::Storage const & storage, NumMwmId mwmId,
               ("Can't register mwm", countryFile.GetName()));
 
   MwmSet::MwmHandle const handle = m_dataSource.GetMwmHandleByCountryFile(countryFile);
+
   m_graph = make_unique<IndexGraph>(
       make_shared<Geometry>(GeometryLoader::Create(m_dataSource, handle, m_vehicleModel,
                                                    AttrLoader(m_dataSource, handle),
                                                    false /* loadAltitudes */)),
-      EdgeEstimator::Create(VehicleType::Car, *m_vehicleModel, nullptr /* trafficStash */));
+      EdgeEstimator::Create(curType, *m_vehicleModel, nullptr /* trafficStash */));
 
-  DeserializeIndexGraph(*handle.GetValue(), VehicleType::Car, *m_graph);
+  DeserializeIndexGraph(*handle.GetValue(), curType, *m_graph);
 }
 
 void TrackMatcher::MatchTrack(vector<DataPoint> const & track, vector<MatchedTrack> & matchedTracks)

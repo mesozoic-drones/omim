@@ -1,16 +1,13 @@
 #include "track_analyzing/track.hpp"
+#include "track_analyzing/track_analyzer/track_type_handler.hpp"
 #include "track_analyzing/utils.hpp"
 
-#include "routing_common/car_model.hpp"
 #include "routing_common/vehicle_model.hpp"
 
 #include "routing/edge_estimator.hpp"
 #include "routing/geometry.hpp"
 
 #include "storage/routing_helpers.hpp"
-#include "storage/storage.hpp"
-
-#include "platform/platform.hpp"
 
 #include "base/file_name_utils.hpp"
 #include "base/logging.hpp"
@@ -127,7 +124,7 @@ namespace track_analyzing
 {
 void CmdTracks(string const & filepath, string const & trackExtension, StringFilter mwmFilter,
                StringFilter userFilter, TrackFilter const & filter, bool noTrackLogs,
-               bool noMwmLogs, bool noWorldLogs)
+               bool noMwmLogs, bool noWorldLogs, routing::VehicleType const & trackType)
 {
   storage::Storage storage;
   auto numMwmIds = CreateNumMwmIds(storage);
@@ -142,14 +139,12 @@ void CmdTracks(string const & filepath, string const & trackExtension, StringFil
 
     TrackStats & mwmStats = mwmToStats[mwmName];
 
-    shared_ptr<VehicleModelInterface> vehicleModel =
-        CarModelFactory({}).GetVehicleModelForCountry(mwmName);
-
-    Geometry geometry(
-        GeometryLoader::CreateFromFile(GetCurrentVersionMwmFile(storage, mwmName), vehicleModel));
-
-    shared_ptr<EdgeEstimator> estimator =
-        EdgeEstimator::Create(VehicleType::Car, *vehicleModel, nullptr /* trafficStash */);
+    shared_ptr<VehicleModelInterface> vehicleModel;
+    Geometry geometry;
+    shared_ptr<EdgeEstimator> estimator;
+    InitModelData(trackType, mwmName, storage, vehicleModel, geometry);
+    estimator =
+        routing::EdgeEstimator::Create(trackType, *vehicleModel, nullptr /* trafficStash */);
 
     for (auto it : userToMatchedTracks)
     {

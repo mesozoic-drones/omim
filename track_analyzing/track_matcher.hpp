@@ -9,7 +9,7 @@
 
 #include "indexer/data_source.hpp"
 
-#include <storage/storage.hpp>
+#include "storage/storage.hpp"
 
 #include "geometry/point2d.hpp"
 
@@ -22,8 +22,9 @@ namespace track_analyzing
 class TrackMatcher final
 {
 public:
+  TrackMatcher() = delete;
   TrackMatcher(storage::Storage const & storage, routing::NumMwmId mwmId,
-               platform::CountryFile const & countryFile);
+               platform::CountryFile const & countryFile, std::string const & trackType);
 
   void MatchTrack(std::vector<DataPoint> const & track, std::vector<MatchedTrack> & matchedTracks);
 

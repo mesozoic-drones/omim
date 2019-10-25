@@ -14,6 +14,8 @@ set(
   crossroad_checker.cpp
   crossroad_checker.hpp
   track_analyzer.cpp
+  track_type_handler.cpp
+  track_type_handler.hpp
   utils.cpp
   utils.hpp
 )

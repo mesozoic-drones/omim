@@ -1,12 +1,11 @@
 #include "track_analyzing/track.hpp"
+#include "track_analyzing/track_analyzer/track_type_handler.hpp"
 #include "track_analyzing/utils.hpp"
 
 #include "routing/geometry.hpp"
 
-#include "routing_common/car_model.hpp"
 #include "routing_common/vehicle_model.hpp"
 
-#include "indexer/feature.hpp"
 #include "indexer/features_vector.hpp"
 
 #include "storage/routing_helpers.hpp"
@@ -25,7 +24,7 @@ using namespace std;
 namespace track_analyzing
 {
 void CmdTrack(string const & trackFile, string const & mwmName, string const & user,
-              size_t trackIdx)
+              size_t trackIdx, routing::VehicleType const & trackType)
 {
   storage::Storage storage;
   auto const numMwmIds = CreateNumMwmIds(storage);
@@ -36,10 +35,10 @@ void CmdTrack(string const & trackFile, string const & mwmName, string const & u
       GetMatchedTrack(mwmToMatchedTracks, *numMwmIds, mwmName, user, trackIdx);
 
   string const mwmFile = GetCurrentVersionMwmFile(storage, mwmName);
-  shared_ptr<VehicleModelInterface> vehicleModel =
-      CarModelFactory({}).GetVehicleModelForCountry(mwmName);
+  shared_ptr<VehicleModelInterface> vehicleModel;
   FeaturesVectorTest featuresVector(FilesContainerR(make_unique<FileReader>(mwmFile)));
-  Geometry geometry(GeometryLoader::CreateFromFile(mwmFile, vehicleModel));
+  Geometry geometry;
+  InitModelData(trackType, mwmName, storage, vehicleModel, geometry);
 
   uint64_t const duration =
       track.back().GetDataPoint().m_timestamp - track.front().GetDataPoint().m_timestamp;
@@ -68,9 +67,9 @@ void CmdTrack(string const & trackFile, string const & mwmName, string const & u
       speed = CalcSpeedKMpH(distance, elapsed);
 
     LOG(LINFO, (base::SecondsSinceEpochToString(point.GetDataPoint().m_timestamp),
-                point.GetDataPoint().m_latLon, point.GetSegment(), ", traffic:",
-                point.GetDataPoint().m_traffic, ", distance:", distance, ", elapsed:", elapsed,
-                ", speed:", speed));
+                point.GetDataPoint().m_latLon, point.GetSegment(),
+                ", traffic:", point.GetDataPoint().m_traffic, ", distance:", distance,
+                ", elapsed:", elapsed, ", speed:", speed));
   }
 }
 }  // namespace track_analyzing

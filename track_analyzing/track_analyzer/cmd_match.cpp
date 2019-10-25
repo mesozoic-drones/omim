@@ -35,7 +35,8 @@ namespace
 using Iter = typename vector<string>::iterator;
 
 void MatchTracks(MwmToTracks const & mwmToTracks, storage::Storage const & storage,
-                 NumMwmIds const & numMwmIds, MwmToMatchedTracks & mwmToMatchedTracks)
+                 NumMwmIds const & numMwmIds, MwmToMatchedTracks & mwmToMatchedTracks,
+                 string const & trackType)
 {
   base::Timer timer;
 
@@ -46,7 +47,7 @@ void MatchTracks(MwmToTracks const & mwmToTracks, storage::Storage const & stora
   auto processMwm = [&](string const & mwmName, UserToTrack const & userToTrack) {
     auto const countryFile = platform::CountryFile(mwmName);
     auto const mwmId = numMwmIds.GetId(countryFile);
-    TrackMatcher matcher(storage, mwmId, countryFile);
+    TrackMatcher matcher(storage, mwmId, countryFile, trackType);
 
     auto & userToMatchedTracks = mwmToMatchedTracks[mwmId];
 
@@ -75,8 +76,8 @@ void MatchTracks(MwmToTracks const & mwmToTracks, storage::Storage const & stora
     pointsCount += matcher.GetPointsCount();
     nonMatchedPointsCount += matcher.GetNonMatchedPointsCount();
 
-    LOG(LINFO, (numMwmIds.GetFile(mwmId).GetName(), ", users:", userToTrack.size(), ", tracks:",
-                matcher.GetTracksCount(), ", points:", matcher.GetPointsCount(),
+    LOG(LINFO, (numMwmIds.GetFile(mwmId).GetName(), ", users:", userToTrack.size(),
+                ", tracks:", matcher.GetTracksCount(), ", points:", matcher.GetPointsCount(),
                 ", non matched points:", matcher.GetNonMatchedPointsCount()));
   };
 
@@ -90,13 +91,15 @@ void MatchTracks(MwmToTracks const & mwmToTracks, storage::Storage const & stora
 
 namespace track_analyzing
 {
-void CmdMatch(string const & logFile, string const & trackFile, shared_ptr<NumMwmIds> const & numMwmIds, Storage const & storage)
+void CmdMatch(string const & logFile, string const & trackFile,
+              shared_ptr<NumMwmIds> const & numMwmIds, Storage const & storage,
+              std::string const & trackType)
 {
   MwmToTracks mwmToTracks;
   ParseTracks(logFile, numMwmIds, mwmToTracks);
 
   MwmToMatchedTracks mwmToMatchedTracks;
-  MatchTracks(mwmToTracks, storage, *numMwmIds, mwmToMatchedTracks);
+  MatchTracks(mwmToTracks, storage, *numMwmIds, mwmToMatchedTracks, trackType);
 
   FileWriter writer(trackFile, FileWriter::OP_WRITE_TRUNCATE);
   MwmToMatchedTracksSerializer serializer(numMwmIds);
@@ -104,16 +107,16 @@ void CmdMatch(string const & logFile, string const & trackFile, shared_ptr<NumMw
   LOG(LINFO, ("Matched tracks were saved to", trackFile));
 }
 
-void CmdMatch(string const & logFile, string const & trackFile)
+void CmdMatch(string const & logFile, string const & trackFile, string const & trackType)
 {
   LOG(LINFO, ("Matching", logFile));
   Storage storage;
   storage.RegisterAllLocalMaps(false /* enableDiffs */);
   shared_ptr<NumMwmIds> numMwmIds = CreateNumMwmIds(storage);
-  CmdMatch(logFile, trackFile, numMwmIds, storage);
+  CmdMatch(logFile, trackFile, numMwmIds, storage, trackType);
 }
 
-void UnzipAndMatch(Iter begin, Iter end, string const & trackExt)
+void UnzipAndMatch(Iter begin, Iter end, string const & trackExt, string const & trackType)
 {
   Storage storage;
   storage.RegisterAllLocalMaps(false /* enableDiffs */);
@@ -149,12 +152,12 @@ void UnzipAndMatch(Iter begin, Iter end, string const & trackExt)
       continue;
     }
 
-    CmdMatch(file, file + trackExt, numMwmIds, storage);
+    CmdMatch(file, file + trackExt, numMwmIds, storage, trackType);
     FileWriter::DeleteFileX(file);
   }
 }
 
-void CmdMatchDir(string const & logDir, string const & trackExt)
+void CmdMatchDir(string const & logDir, string const & trackExt, string const & trackType)
 {
   Platform::EFileType fileType = Platform::FILE_TYPE_UNKNOWN;
   Platform::EError const result = Platform::GetFileType(logDir, fileType);
@@ -196,11 +199,11 @@ void CmdMatchDir(string const & logDir, string const & trackExt)
   for (size_t i = 0; i < threadsCount - 1; ++i)
   {
     auto end = begin + blockSize;
-    threads[i] = thread(UnzipAndMatch, begin, end, trackExt);
+    threads[i] = thread(UnzipAndMatch, begin, end, trackExt, trackType);
     begin = end;
   }
 
-  UnzipAndMatch(begin, filesList.end(), trackExt);
+  UnzipAndMatch(begin, filesList.end(), trackExt, trackType);
   for (auto & t : threads)
     t.join();
 }
