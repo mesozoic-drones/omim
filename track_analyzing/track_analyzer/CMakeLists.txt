@@ -13,6 +13,10 @@ set(
   cmd_unmatched_tracks.cpp
   crossroad_checker.cpp
   crossroad_checker.hpp
+  table_car_model.cpp
+  table_car_model.hpp
+  table_common_model.cpp
+  table_common_model.hpp
   track_analyzer.cpp
   track_type_handler.cpp
   track_type_handler.hpp

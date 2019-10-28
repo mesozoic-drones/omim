@@ -31,6 +31,9 @@ TrackParams GetParamsForType(routing::VehicleType const & trackType);
 std::shared_ptr<routing::VehicleModelInterface> GetVehicleModel(
     routing::VehicleType const & vehicleType, std::string country);
 
+std::shared_ptr<routing::VehicleModelFactoryInterface> GetVehicleModelFactory(
+    routing::VehicleType const & vehicleType);
+
 routing::VehicleType GetVehicleType(std::string const & trackType);
 
 void InitModelData(routing::VehicleType const & trackType, std::string const & mwmName,

@@ -88,7 +88,8 @@ void CmdMatchDir(string const & logDir, string const & trackExt, string const & 
 void CmdUnmatchedTracks(string const & logFile, string const & trackFileCsv);
 // Print aggregated tracks to csv table.
 void CmdTagsTable(string const & filepath, string const & trackExtension,
-                  StringFilter mwmIsFiltered, StringFilter userFilter);
+                  StringFilter mwmIsFiltered, StringFilter userFilter,
+                  routing::VehicleType const & trackType);
 // Print track information.
 void CmdTrack(string const & trackFile, string const & mwmName, string const & user,
               size_t trackIdx, routing::VehicleType const & trackType);
@@ -142,15 +143,8 @@ int main(int argc, char ** argv)
     }
     else if (cmd == "table")
     {
-      string const trackType = Checked_track_type();
-      if (trackType == "car")
-        CmdTagsTable(Checked_in(), FLAGS_track_extension, MakeFilter(FLAGS_mwm),
-                     MakeFilter(FLAGS_user));
-      else
-      {
-        LOG(LERROR, ("cmd=table for non-car tracks is under construction."));
-        return 1;
-      }
+      CmdTagsTable(Checked_in(), FLAGS_track_extension, MakeFilter(FLAGS_mwm),
+                   MakeFilter(FLAGS_user), GetVehicleType(Checked_track_type()));
     }
     else if (cmd == "gpx")
     {

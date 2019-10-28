@@ -32,7 +32,21 @@ std::shared_ptr<routing::VehicleModelInterface> GetVehicleModel(
     return routing::BicycleModelFactory().GetVehicleModelForCountry(country);
   case routing::VehicleType::Pedestrian:
     return routing::PedestrianModelFactory().GetVehicleModelForCountry(country);
-    break;
+  default: UNREACHABLE();
+  }
+}
+
+std::shared_ptr<routing::VehicleModelFactoryInterface> GetVehicleModelFactory(
+    routing::VehicleType const & vehicleType)
+{
+  switch (vehicleType)
+  {
+  case routing::VehicleType::Car:
+    return std::make_shared<routing::CarModelFactory>(routing::VehicleModelFactory::CountryParentNameGetterFn{});
+  case routing::VehicleType::Bicycle:
+    return std::make_shared<routing::BicycleModelFactory>(routing::VehicleModelFactory::CountryParentNameGetterFn{});
+  case routing::VehicleType::Pedestrian:
+    return std::make_shared<routing::PedestrianModelFactory>(routing::VehicleModelFactory::CountryParentNameGetterFn{});
   default: UNREACHABLE();
   }
 }
@@ -47,6 +61,7 @@ routing::VehicleType GetVehicleType(std::string const & trackType)
     return routing::VehicleType::Pedestrian;
   UNREACHABLE();
 }
+
 
 void InitModelData(routing::VehicleType const & trackType, std::string const & mwmName,
                    storage::Storage const & storage,
