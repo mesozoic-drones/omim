@@ -11,6 +11,8 @@
 #include <tuple>
 #include <utility>
 
+#include "routing_common/pedestrian_model.hpp"
+#include "routing_common/bicycle_model.hpp"
 namespace
 {
 routing::MaxspeedType constexpr kMaxspeedTopBound = 200;

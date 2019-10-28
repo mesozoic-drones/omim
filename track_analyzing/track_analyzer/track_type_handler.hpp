@@ -28,6 +28,8 @@ struct TrackParams
 
 TrackParams GetParamsForType(routing::VehicleType const & trackType);
 
+std::string GetCsvTableHeader(routing::VehicleType const & trackType);
+
 std::shared_ptr<routing::VehicleModelInterface> GetVehicleModel(
     routing::VehicleType const & vehicleType, std::string country);
 

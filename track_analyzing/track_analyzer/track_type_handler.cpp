@@ -36,6 +36,32 @@ std::shared_ptr<routing::VehicleModelInterface> GetVehicleModel(
   }
 }
 
+std::string GetCsvTableHeader(routing::VehicleType const & trackType)
+{
+  switch (trackType)
+  {
+  case routing::VehicleType::Car:
+    return "user,mwm,hw type,surface type,maxspeed km/h,is city road,is one way,is day,lat "
+           "lon,distance,time,"
+           "mean speed km/h,turn from smaller to bigger,turn from bigger to smaller,from link,to "
+           "link,"
+           "intersection with big,intersection with small,intersection with link";
+  case routing::VehicleType::Bicycle:
+    return "user,mwm,hw type,surface type,maxspeed km/h,is city road,is day,lat "
+                      "lon,distance,time,"
+                      "mean speed km/h,turn from smaller to bigger,turn from bigger to smaller,from link,to "
+                      "link,"
+                      "intersection with big,intersection with small,intersection with link";
+  case routing::VehicleType::Pedestrian:
+    return "user,mwm,hw type,surface type,maxspeed km/h,is city road,is one way,is day,lat "
+           "lon,distance,time,"
+           "mean speed km/h,turn from smaller to bigger,turn from bigger to smaller,from link,to "
+           "link,"
+           "intersection with big,intersection with small,intersection with link";
+  default: UNREACHABLE();
+  }
+}
+
 std::shared_ptr<routing::VehicleModelFactoryInterface> GetVehicleModelFactory(
     routing::VehicleType const & vehicleType)
 {

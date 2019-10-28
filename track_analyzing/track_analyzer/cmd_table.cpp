@@ -1,5 +1,5 @@
 #include "track_analyzing/track_analyzer/crossroad_checker.hpp"
-#include "track_analyzing/track_analyzer/table_car_model.hpp"
+//#include "track_analyzing/track_analyzer/table_car_model.hpp"
 #include "track_analyzing/track_analyzer/track_type_handler.hpp"
 
 #include "track_analyzing/track.hpp"
@@ -37,12 +37,7 @@ namespace track_analyzing
 void CmdTagsTable(string const & filepath, string const & trackExtension, StringFilter mwmFilter,
                   StringFilter userFilter, routing::VehicleType const & trackType)
 {
-  cout << "user,mwm,hw type,surface type,maxspeed km/h,is city road,is one way,is day,lat "
-          "lon,distance,time,"
-          "mean speed km/h,turn from smaller to bigger,turn from bigger to smaller,from link,to "
-          "link,"
-          "intersection with big,intersection with small,intersection with link\n";
-
+  cout << GetCsvTableHeader(trackType) << endl;
   storage::Storage storage;
   storage.RegisterAllLocalMaps(false /* enableDiffs */);
   FrozenDataSource dataSource;
@@ -57,7 +52,6 @@ void CmdTagsTable(string const & filepath, string const & trackExtension, String
     shared_ptr<VehicleModelInterface> vehicleModel =
         modelFactory->GetVehicleModelForCountry(mwmName);
     string const mwmFile = GetCurrentVersionMwmFile(storage, mwmName);
-    MatchedTrackPointToMoveType pointToMoveType(FilesContainerR(make_unique<FileReader>(mwmFile)), *vehicleModel);
     Geometry geometry(GeometryLoader::CreateFromFile(mwmFile, vehicleModel));
 
     auto const edgeEstimator = EdgeEstimator::Create(trackType, *vehicleModel, nullptr /* trafficStash */);
@@ -76,7 +70,7 @@ void CmdTagsTable(string const & filepath, string const & trackExtension, String
 
     auto const mwmId = numMwmIds->GetId(countryFile);
     IsCrossroadChecker checker(indexGraphLoader->GetIndexGraph(mwmId), geometry);
-
+    MatchedTrackPointToMoveType pointToMoveType(FilesContainerR(make_unique<FileReader>(mwmFile)), *vehicleModel);
     for (auto const & kv : userToMatchedTracks)
     {
       string const & user = kv.first;
