@@ -467,6 +467,12 @@ BicycleModel const & BicycleModel::AllLimitsInstance()
   return instance;
 }
 
+// static
+routing::VehicleModel::LimitsInitList const & BicycleModel::GetOptions() { return kBicycleOptionsDefault; }
+
+// static
+VehicleModel::SurfaceInitList const & BicycleModel::GetSurfaces() { return kBicycleSurface; }
+
 BicycleModelFactory::BicycleModelFactory(
     CountryParentNameGetterFn const & countryParentNameGetterFn)
   : VehicleModelFactory(countryParentNameGetterFn)

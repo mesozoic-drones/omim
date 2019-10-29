@@ -53,7 +53,7 @@ std::string GetCsvTableHeader(routing::VehicleType const & trackType)
                       "link,"
                       "intersection with big,intersection with small,intersection with link";
   case routing::VehicleType::Pedestrian:
-    return "user,mwm,hw type,surface type,maxspeed km/h,is city road,is one way,is day,lat "
+    return "user,mwm,hw type,surface type,maxspeed km/h,is city road,is day,lat "
            "lon,distance,time,"
            "mean speed km/h,turn from smaller to bigger,turn from bigger to smaller,from link,to "
            "link,"
@@ -87,7 +87,6 @@ routing::VehicleType GetVehicleType(std::string const & trackType)
     return routing::VehicleType::Pedestrian;
   UNREACHABLE();
 }
-
 
 void InitModelData(routing::VehicleType const & trackType, std::string const & mwmName,
                    storage::Storage const & storage,

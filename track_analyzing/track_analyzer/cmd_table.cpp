@@ -1,6 +1,7 @@
 #include "track_analyzing/track_analyzer/crossroad_checker.hpp"
 //#include "track_analyzing/track_analyzer/table_car_model.hpp"
 #include "track_analyzing/track_analyzer/track_type_handler.hpp"
+#include "track_analyzing/track_analyzer/table_common_model.hpp"
 
 #include "track_analyzing/track.hpp"
 #include "track_analyzing/utils.hpp"
@@ -11,6 +12,10 @@
 #include "routing/index_graph_loader.hpp"
 
 #include "routing_common/vehicle_model.hpp"
+
+#include "routing_common/car_model.hpp"
+#include "routing_common/pedestrian_model.hpp"
+#include "routing_common/bicycle_model.hpp"
 
 #include "indexer/data_source.hpp"
 
@@ -70,7 +75,27 @@ void CmdTagsTable(string const & filepath, string const & trackExtension, String
 
     auto const mwmId = numMwmIds->GetId(countryFile);
     IsCrossroadChecker checker(indexGraphLoader->GetIndexGraph(mwmId), geometry);
-    MatchedTrackPointToMoveType pointToMoveType(FilesContainerR(make_unique<FileReader>(mwmFile)), *vehicleModel);
+    shared_ptr<ModelTypesBase> modelTypes = nullptr;
+    switch (trackType)
+    {
+    case routing::VehicleType::Car:
+      modelTypes = make_shared<ModelTypes<routing::CarModel>>();
+      break;
+    case routing::VehicleType::Bicycle:
+      modelTypes = make_shared<ModelTypes<routing::BicycleModel>>();
+      break;
+    case routing::VehicleType::Pedestrian:
+      modelTypes = shared_ptr<ModelTypes<routing::PedestrianModel>>(new ModelTypes<routing::PedestrianModel>);//make_shared<ModelTypes<routing::PedestrianModel>>();
+      break;
+    default:
+      UNREACHABLE();
+    }
+
+    for (auto const & kv : userToMatchedTracks)
+    {
+      cout << kv.first;
+    }
+    /* MatchedTrackPointToMoveType pointToMoveType(FilesContainerR(make_unique<FileReader>(mwmFile)), *vehicleModel);
     for (auto const & kv : userToMatchedTracks)
     {
       string const & user = kv.first;
@@ -114,7 +139,7 @@ void CmdTagsTable(string const & filepath, string const & trackExtension, String
         if (!summary.empty())
           cout << summary;
       }
-    }
+    } */
   };
 
   auto processTrack = [&](string const & filename, MwmToMatchedTracks const & mwmToMatchedTracks) {

@@ -330,6 +330,12 @@ PedestrianModel const & PedestrianModel::AllLimitsInstance()
   return instance;
 }
 
+// static
+routing::VehicleModel::LimitsInitList const & PedestrianModel::GetOptions() { return kPedestrianOptionsDefault; }
+
+// static
+VehicleModel::SurfaceInitList const & PedestrianModel::GetSurfaces() { return kPedestrianSurface; }
+
 PedestrianModelFactory::PedestrianModelFactory(
     CountryParentNameGetterFn const & countryParentNameGetterFn)
   : VehicleModelFactory(countryParentNameGetterFn)

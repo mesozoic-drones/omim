@@ -1,4 +1,5 @@
 #include "track_analyzing/track_analyzer/table_car_model.hpp"
+#include "track_analyzing/track_analyzer/table_common_model.hpp"
 
 #include "indexer/classificator.hpp"
 
@@ -21,6 +22,7 @@ auto constexpr kValidTrafficValue = traffic::SpeedGroup::G5;
 
 namespace track_analyzing
 {
+/*
 bool CarModelTypes::Type::operator<(Type const & rhs) const
 {
   return std::tie(m_hwType, m_surfaceType) < std::tie(rhs.m_hwType, rhs.m_surfaceType);
@@ -43,6 +45,7 @@ CarModelTypes::CarModelTypes()
 
   for (auto const & surface : routing::CarModel::GetSurfaces())
     m_surfaceTags.push_back(classif().GetTypeByPath(surface.m_types));
+
 }
 
 CarModelTypes::Type CarModelTypes::GetType(FeatureType & feature) const
@@ -228,4 +231,5 @@ RoadInfo MatchedTrackPointToMoveType::GetRoadInfo(routing::Segment const & segme
 
   return m_prevRoadInfo;
 }
+*/
 }  // namespace track_analyzing

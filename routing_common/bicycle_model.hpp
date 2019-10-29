@@ -17,6 +17,8 @@ public:
   SpeedKMpH const & GetOffroadSpeed() const override;
 
   static BicycleModel const & AllLimitsInstance();
+  static LimitsInitList const & GetOptions();
+  static SurfaceInitList const & GetSurfaces();
 
 protected:
   RoadAvailability GetRoadAvailability(feature::TypesHolder const & types) const override;

@@ -1,6 +1,6 @@
 #include "track_analyzing/track_analyzer/table_common_model.hpp"
 
-#include "indexer/classificator.hpp"
+
 
 namespace track_analyzing
 {

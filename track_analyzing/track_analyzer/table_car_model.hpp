@@ -1,6 +1,6 @@
 #pragma once
-#include "track_analyzing/track_analyzer/crossroad_checker.hpp"
 #include "track_analyzing/track_analyzer/table_common_model.hpp"
+#include "track_analyzing/track_analyzer/crossroad_checker.hpp"
 
 #include "track_analyzing/track.hpp"
 #include "track_analyzing/utils.hpp"
@@ -41,28 +41,7 @@
 
 namespace track_analyzing
 {
-class CarModelTypes final
-{
-public:
-  CarModelTypes();
-
-  struct Type
-  {
-    bool operator<(Type const & rhs) const;
-    bool operator==(Type const & rhs) const;
-    bool operator!=(Type const & rhs) const;
-
-    uint32_t m_hwType = 0;
-    uint32_t m_surfaceType = 0;
-  };
-
-  Type GetType(FeatureType & feature) const;
-
-private:
-  std::vector<uint32_t> m_hwtags;
-  std::vector<uint32_t> m_surfaceTags;
-};
-
+/*
 struct RoadInfo
 {
   bool operator==(RoadInfo const & rhs) const;
@@ -139,5 +118,5 @@ private:
   routing::Maxspeeds m_maxspeeds;
   uint32_t m_prevFeatureId = std::numeric_limits<uint32_t>::max();
   RoadInfo m_prevRoadInfo;
-};
+}; */
 }  // namespace track_analyzing
