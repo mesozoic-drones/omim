@@ -199,10 +199,17 @@ protected:
 class IntermediateDataReaderInterface
 {
 public:
+  using ForEachRelationFn = std::function<base::ControlFlow(uint64_t, OSMElementCacheReader &)>;
+
   virtual ~IntermediateDataReaderInterface() = default;
 
   virtual bool GetNode(Key id, double & lat, double & lon) const = 0;
   virtual bool GetWay(Key id, WayElement & e) = 0;
+  virtual bool GetRelation(Key id, RelationElement & e) = 0;
+
+  virtual void ForEachRelationByNodeCached(Key /* id */, ForEachRelationFn & /* toDo */) {}
+  virtual void ForEachRelationByWayCached(Key /* id */, ForEachRelationFn & /* toDo */) {}
+  virtual void ForEachRelationByRelationCached(Key /* id */, ForEachRelationFn & /* toDo */) {}
 };
 
 class IntermediateDataReader : public IntermediateDataReaderInterface
@@ -211,33 +218,32 @@ public:
   IntermediateDataReader(PointStorageReaderInterface const & nodes,
                          feature::GenerateInfo const & info, bool forceReload = false);
 
-  // IntermediateDataReaderInterface overrides
+  // IntermediateDataReaderInterface overrides:
   // TODO |GetNode()|, |lat|, |lon| are used as y, x in real.
   bool GetNode(Key id, double & lat, double & lon) const override
   {
     return m_nodes.GetPoint(id, lat, lon);
   }
+  
   bool GetWay(Key id, WayElement & e) override { return m_ways.Read(id, e); }
+  bool GetRelation(Key id, RelationElement & e) override { return m_relations.Read(id, e); }
 
-  template <typename ToDo>
-  void ForEachRelationByWay(Key id, ToDo && toDo)
+  void ForEachRelationByWayCached(Key id, ForEachRelationFn & toDo) override
   {
-    RelationProcessor<ToDo> processor(m_relations, std::forward<ToDo>(toDo));
+    CachedRelationProcessor<ForEachRelationFn> processor(m_relations, toDo);
     m_wayToRelations.ForEachByKey(id, processor);
   }
 
-  template <typename ToDo>
-  void ForEachRelationByWayCached(Key id, ToDo && toDo)
+  void ForEachRelationByNodeCached(Key id, ForEachRelationFn & toDo) override
   {
-    CachedRelationProcessor<ToDo> processor(m_relations, std::forward<ToDo>(toDo));
-    m_wayToRelations.ForEachByKey(id, processor);
-  }
-
-  template <typename ToDo>
-  void ForEachRelationByNodeCached(Key id, ToDo && toDo)
-  {
-    CachedRelationProcessor<ToDo> processor(m_relations, std::forward<ToDo>(toDo));
+    CachedRelationProcessor<ForEachRelationFn> processor(m_relations, toDo);
     m_nodeToRelations.ForEachByKey(id, processor);
+  }
+
+  void ForEachRelationByRelationCached(Key id, ForEachRelationFn & toDo) override
+  {
+    CachedRelationProcessor<ForEachRelationFn> processor(m_relations, toDo);
+    m_relationToRelations.ForEachByKey(id, processor);
   }
 
 private:
@@ -246,8 +252,12 @@ private:
   template <typename Element, typename ToDo>
   class ElementProcessorBase
   {
-  public:
-    ElementProcessorBase(CacheReader & reader, ToDo & toDo) : m_reader(reader), m_toDo(toDo) {}
+  public:  
+    ElementProcessorBase(CacheReader & reader, ToDo & toDo)
+      : m_reader(reader)
+      , m_toDo(toDo)
+    {
+    }
 
     base::ControlFlow operator()(uint64_t id)
     {
@@ -260,20 +270,17 @@ private:
     ToDo & m_toDo;
   };
 
+
   template <typename ToDo>
-  struct RelationProcessor : public ElementProcessorBase<RelationElement, ToDo>
+  struct CachedRelationProcessor : public ElementProcessorBase<RelationElement, ToDo>
   {
     using Base = ElementProcessorBase<RelationElement, ToDo>;
 
-    RelationProcessor(CacheReader & reader, ToDo & toDo) : Base(reader, toDo) {}
-  };
+    CachedRelationProcessor(CacheReader & reader, ToDo & toDo)
+      : Base(reader, toDo)
+    {
+    }
 
-  template <typename ToDo>
-  struct CachedRelationProcessor : public RelationProcessor<ToDo>
-  {
-    using Base = RelationProcessor<ToDo>;
-
-    CachedRelationProcessor(CacheReader & reader, ToDo & toDo) : Base(reader, toDo) {}
     base::ControlFlow operator()(uint64_t id) { return this->m_toDo(id, this->m_reader); }
   };
 
@@ -282,6 +289,7 @@ private:
   cache::OSMElementCacheReader m_relations;
   cache::IndexFileReader const & m_nodeToRelations;
   cache::IndexFileReader const & m_wayToRelations;
+  cache::IndexFileReader const & m_relationToRelations;
 };
 
 class IntermediateDataWriter
@@ -314,6 +322,7 @@ private:
   cache::OSMElementCacheWriter m_relations;
   cache::IndexFileWriter m_nodeToRelations;
   cache::IndexFileWriter m_wayToRelations;
+  cache::IndexFileWriter m_relationToRelations;
 };
 
 std::unique_ptr<PointStorageReaderInterface>

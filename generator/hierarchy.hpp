@@ -2,6 +2,7 @@
 
 #include "generator/composite_id.hpp"
 #include "generator/feature_builder.hpp"
+#include "generator/filter_interface.hpp"
 #include "generator/gen_mwm_info.hpp"
 #include "generator/hierarchy_entry.hpp"
 #include "generator/platform_helpers.hpp"
@@ -42,9 +43,7 @@ using GetNameFn = std::function<std::string(StringUtf8Multilang const &)>;
 using PrintFn = std::function<std::string(HierarchyEntry const &)>;
 
 // These are dummy functions.
-uint32_t GetTypeDefault(FeatureParams::Types const &);
-std::string GetNameDefault(StringUtf8Multilang const &);
-std::string PrintDefault(HierarchyEntry const &);
+bool FilterFeatureDefault(feature::FeatureBuilder const &);
 
 // The HierarchyPlace class is an abstraction of FeatureBuilder to build a hierarchy of objects.
 // It allows you to work with the geometry of points and areas.
@@ -106,7 +105,7 @@ public:
   explicit HierarchyBuilder(std::string const & dataFilename);
 
   void SetGetMainTypeFunction(GetMainTypeFn const & getMainType);
-  void SetGetNameFunction(GetNameFn const & getName);
+  void SetFilter(std::shared_ptr<FilterInterface> const & filter);
 
   Node::Ptrs Build();
 
@@ -114,14 +113,14 @@ protected:
   std::vector<feature::FeatureBuilder> ReadFeatures(std::string const & dataFilename);
 
   std::string m_dataFullFilename;
-  GetMainTypeFn m_getMainType = GetTypeDefault;
-  GetNameFn m_getName = GetNameDefault;
+  GetMainTypeFn m_getMainType;
+  std::shared_ptr<FilterInterface> m_filter;
 };
 
-class HierarchyLineEnricher
+class HierarchyEntryEnricher
 {
 public:
-  HierarchyLineEnricher(std::string const & osm2FtIdsPath, std::string const & countryFullPath);
+  HierarchyEntryEnricher(std::string const & osm2FtIdsPath, std::string const & countryFullPath);
 
   boost::optional<m2::PointD> GetFeatureCenter(CompositeId const & id) const;
 
@@ -133,12 +132,12 @@ private:
 class HierarchyLinesBuilder
 {
 public:
-  HierarchyLinesBuilder(HierarchyBuilder::Node::Ptrs && nodes);
+  HierarchyLinesBuilder(HierarchyBuilder::Node::Ptrs && trees);
 
   void SetGetMainTypeFunction(GetMainTypeFn const & getMainType);
   void SetGetNameFunction(GetNameFn const & getName);
   void SetCountry(storage::CountryId const & country);
-  void SetHierarchyLineEnricher(std::shared_ptr<HierarchyLineEnricher> const & enricher);
+  void SetHierarchyEntryEnricher(std::unique_ptr<HierarchyEntryEnricher> && enricher);
 
   std::vector<HierarchyEntry> GetHierarchyLines();
 
@@ -146,11 +145,11 @@ private:
   m2::PointD GetCenter(HierarchyBuilder::Node::Ptr const & node);
   HierarchyEntry Transform(HierarchyBuilder::Node::Ptr const & node);
 
-  HierarchyBuilder::Node::Ptrs m_nodes;
-  GetMainTypeFn m_getMainType = GetTypeDefault;
-  GetNameFn m_getName = GetNameDefault;
+  HierarchyBuilder::Node::Ptrs m_trees;
+  GetMainTypeFn m_getMainType;
+  GetNameFn m_getName;
   storage::CountryId m_countryName;
-  std::shared_ptr<HierarchyLineEnricher> m_enricher;
+  std::unique_ptr<HierarchyEntryEnricher> m_enricher;
 };
 }  // namespace hierarchy
 }  // namespace generator
