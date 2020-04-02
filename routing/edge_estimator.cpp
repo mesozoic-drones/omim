@@ -138,7 +138,9 @@ double EdgeEstimator::CalcLeapWeight(ms::LatLon const & from, ms::LatLon const &
   // leap edges will be added with a half of max speed.
   // @TODO(bykoianko) It's necessary to gather statistics to calculate better factor(s) instead of
   // one below.
-  return TimeBetweenSec(from, to, m_maxWeightSpeedMpS / 2.0);
+  double res = TimeBetweenSec(from, to, m_maxWeightSpeedMpS / 2.0);
+  LOG(LINFO, ("EdgeEstimator", from, to, m_maxWeightSpeedMpS, res));
+  return res;
 }
 
 double EdgeEstimator::GetMaxWeightSpeedMpS() const { return m_maxWeightSpeedMpS; }
