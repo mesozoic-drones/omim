@@ -4,7 +4,7 @@
 #include "routing/base/astar_vertex_data.hpp"
 #include "routing/base/astar_weight.hpp"
 #include "routing/base/routing_result.hpp"
-
+#include "routing/joint_segment.hpp"
 #include "base/assert.hpp"
 #include "base/cancellable.hpp"
 #include "base/logging.hpp"
@@ -517,7 +517,7 @@ AStarAlgorithm<Vertex, Edge, Weight>::FindPath(P & params, RoutingResult<Vertex,
   auto const adjustEdgeWeight = [&](Vertex const & vertexV, Edge const & edge) {
     auto const reducedWeight = fullToReducedLength(vertexV, edge.GetTarget(), edge.GetWeight());
 
-    CHECK_GREATER_OR_EQUAL(reducedWeight, -epsilon, ("Invariant violated."));
+    CHECK_GREATER_OR_EQUAL(reducedWeight, -epsilon, ("Invariant violated.", graph.m_startPoint, graph.m_endPoint));
 
     return std::max(reducedWeight, kZeroDistance);
   };

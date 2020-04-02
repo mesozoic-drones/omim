@@ -40,6 +40,9 @@ void LeapsGraph::GetEdgesList(Segment const & segment, bool isOutgoing,
                               std::vector<SegmentEdge> & edges)
 {
   edges.clear();
+  LOG(LINFO, ("LeapsGraph", "Segment", segment, "Is start =",
+      segment == m_startSegment,
+      "Is finish =", segment == m_finishSegment));
 
   if (segment == m_startSegment)
   {
@@ -65,7 +68,8 @@ void LeapsGraph::GetEdgesList(Segment const & segment, bool isOutgoing,
     m_starter.GetGraph().GetTwinsInner(segment, isOutgoing, twins);
     for (auto const & twin : twins)
       edges.emplace_back(twin, RouteWeight(0.0));
-
+    for (auto edge : edges)
+      LOG(LINFO, ("LeapsGraph", "\ttwin", edge));
     return;
   }
 
@@ -89,6 +93,8 @@ void LeapsGraph::GetEdgesListFromStart(Segment const & segment, std::vector<Segm
       edges.emplace_back(exit, weight);
     }
   }
+  for (auto edge : edges)
+    LOG(LINFO, ("LeapsGraph", "\tedge", edge));
 }
 
 void LeapsGraph::GetEdgesListToFinish(Segment const & segment, std::vector<SegmentEdge> & edges)
@@ -105,6 +111,8 @@ void LeapsGraph::GetEdgesListToFinish(Segment const & segment, std::vector<Segme
       edges.emplace_back(enter, weight);
     }
   }
+  for (auto edge : edges)
+    LOG(LINFO, ("LeapsGraph", "\tedge", edge));
 }
 
 ms::LatLon const & LeapsGraph::GetPoint(Segment const & segment, bool front) const

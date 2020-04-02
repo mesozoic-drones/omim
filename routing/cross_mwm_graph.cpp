@@ -146,6 +146,8 @@ void CrossMwmGraph::GetOutgoingEdgeList(Segment const & enter, vector<SegmentEdg
 
   if (CrossMwmSectionExists(enter.GetMwmId()))
     m_crossMwmIndexGraph.GetOutgoingEdgeList(enter, edges);
+  for (auto edge : edges)
+    LOG(LINFO, ("CrossMwmGrahp", "\tedge", edge));
 }
 
 void CrossMwmGraph::GetIngoingEdgeList(Segment const & exit, vector<SegmentEdge> & edges)
@@ -166,6 +168,8 @@ void CrossMwmGraph::GetIngoingEdgeList(Segment const & exit, vector<SegmentEdge>
 
   if (CrossMwmSectionExists(exit.GetMwmId()))
     m_crossMwmIndexGraph.GetIngoingEdgeList(exit, edges);
+  for (auto edge : edges)
+    LOG(LINFO, ("CrossMwmGraph", "\tedge", edge));
 }
 
 void CrossMwmGraph::Clear()
