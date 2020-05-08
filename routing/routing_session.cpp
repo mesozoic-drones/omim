@@ -36,6 +36,8 @@ double constexpr kRunawayDistanceSensitivityMeters = 0.01;
 double constexpr kCompletionPercentAccuracy = 5;
 
 double constexpr kMinimumETASec = 60.0;
+
+static auto constexpr kEps = 1e-5;
 }  // namespace
 
 namespace routing
@@ -521,6 +523,13 @@ void RoutingSession::MatchLocationToRoadGraph(location::GpsInfo & location)
   double const radius = m_route->GetCurrentRoutingSettings().m_matchingThresholdM;
 
   m2::PointD const direction = m_positionAccumulator.GetDirection();
+
+  if (base::AlmostEqualAbs(direction, m2::PointD::Zero(), kEps))
+  {
+    m_projectedToRoadGraph = false;
+    return;
+  }
+
   EdgeProj proj;
   if (!m_router->FindClosestProjectionToRoad(locationMerc, direction, radius, proj))
   {
@@ -528,27 +537,31 @@ void RoutingSession::MatchLocationToRoadGraph(location::GpsInfo & location)
     return;
   }
 
+  // First matching to the same road. We pull coordinates and angle on the following matchings.
   if (!m_projectedToRoadGraph)
   {
     m_projectedToRoadGraph = true;
+    m_proj = proj;
+    return;
   }
-  else
-  {
-    if (m_proj.m_edge.GetFeatureId() == proj.m_edge.GetFeatureId())
-    {
-      location.m_latitude = mercator::YToLat(proj.m_point.y);
-      location.m_longitude = mercator::XToLon(proj.m_point.x);
 
-      if (m_route->GetCurrentRoutingSettings().m_matchRoute)
+  if (m_proj.m_edge.GetFeatureId() == proj.m_edge.GetFeatureId())
+  {
+    if (m_route->GetCurrentRoutingSettings().m_matchRoute)
+    {
+      if (!base::AlmostEqualAbs(m_proj.m_point, proj.m_point, kEps))
       {
         location.m_bearing =
             location::AngleToBearing(base::RadToDeg(ang::AngleTo(m_proj.m_point, proj.m_point)));
       }
     }
-    else
-    {
-      m_projectedToRoadGraph = false;
-    }
+
+    location.m_latitude = mercator::YToLat(proj.m_point.y);
+    location.m_longitude = mercator::XToLon(proj.m_point.x);
+  }
+  else
+  {
+    m_projectedToRoadGraph = false;
   }
 
   m_proj = proj;
