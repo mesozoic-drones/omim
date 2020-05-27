@@ -26,8 +26,6 @@
 #include "3party/boost/boost/algorithm/string.hpp"
 #include "3party/boost/boost/container_hash/hash.hpp"
 
-#include "3party/jansson/myjansson.hpp"
-
 namespace
 {
 template <typename... Values>
@@ -122,6 +120,47 @@ bool DumpData(T const & container, std::string const & path, bool overwrite)
   }
 
   return true;
+}
+
+template <class T>
+bool ReadData(T & container, std::string const & path)
+{
+  std::ifstream input;
+  input.exceptions(std::ifstream::badbit);
+
+  try
+  {
+    input.open(path);
+
+    if (!input.is_open())
+      return false;
+
+    std::string line;
+
+    while (std::getline(input, line))
+    {
+      if (line.empty())
+        continue;
+      base::Json jsonObject(line);
+      CHECK(jsonObject.get() != nullptr, ("Error parsing json from line:", line));
+      container.Read(jsonObject);
+    }
+  }
+  catch (std::ifstream::failure const & se)
+  {
+    LOG(LWARNING, ("Exception reading line-by-line json from file", path, se.what()));
+    return false;
+  }
+
+  return true;
+}
+
+template <class T, class K, class V>
+void InsertWithCheck(T & container, K const & key, V const & value)
+{
+  bool inserted = false;
+  std::tie(std::ignore, inserted) = container.emplace(key, value);
+  CHECK(inserted, ());
 }
 
 struct StopOnShape
@@ -574,8 +613,20 @@ bool WorldFeed::FillStopsEdges()
 
       EdgeData data;
       data.m_shapeLink.m_shapeId = shapeId;
-      data.m_weight =
-          stopTime2.arrival_time.get_total_seconds() - stopTime1.departure_time.get_total_seconds();
+
+      size_t const timeNext = stopTime2.arrival_time.get_total_seconds();
+      size_t const timePrev = stopTime1.departure_time.get_total_seconds();
+      if (timeNext < timePrev)
+      {
+        LOG(LWARNING, ("2nd stop time:", timeNext, "1st stop time:", timePrev,
+                       "line GTFS id:", lineData.m_gtfsTripId));
+
+        data.m_weight = timePrev - timeNext;
+      }
+      else
+      {
+        data.m_weight = timeNext - timePrev;
+      }
 
       auto [itEdge, insertedEdge] = m_edges.m_data.emplace(EdgeId(stop1Id, stop2Id, lineId), data);
 
@@ -1023,7 +1074,7 @@ void WorldFeed::FillTransfers()
       edgeData.m_toStopId = stop2Id;
       edgeData.m_weight = transfer.min_transfer_time;  // Can be 0.
 
-      std::tie(std::ignore, inserted) = m_edgesTransfers.m_data.insert(edgeData);
+      std::tie(std::ignore, inserted) = m_edgesTransfer.m_data.insert(edgeData);
       if (!inserted)
         LOG(LINFO, ("Transfers copy", transfer.from_stop_id, transfer.to_stop_id));
     }
@@ -1141,6 +1192,179 @@ bool WorldFeed::SetFeed(gtfs::Feed && feed)
   return true;
 }
 
+TransitId GetIdFromJson(json_t * obj)
+{
+  TransitId id;
+  FromJSONObject(obj, "id", id);
+  return id;
+}
+
+std::vector<TimeFromGateToStop> GetWeightsFromJson(json_t * obj)
+{
+  json_t * arr = base::GetJSONObligatoryField(obj, "weights");
+  CHECK(json_is_array(arr), ());
+
+  size_t const count = json_array_size(arr);
+  std::vector<TimeFromGateToStop> weights;
+  weights.resize(count);
+
+  for (size_t i = 0; i < count; ++i)
+  {
+    json_t * item = json_array_get(arr, i);
+
+    TimeFromGateToStop weight;
+    FromJSONObject(item, "stop_id", weight.m_stopId);
+    FromJSONObject(item, "time_to_stop", weight.m_timeSeconds);
+    weights.emplace_back(weight);
+  }
+
+  CHECK(!weights.empty(), ());
+  return weights;
+}
+
+IdList GetStopIdsFromJson(json_t * obj)
+{
+  json_t * arr = base::GetJSONObligatoryField(obj, "stops_ids");
+  CHECK(json_is_array(arr), ());
+
+  size_t const count = json_array_size(arr);
+  IdList stopIds;
+  stopIds.resize(count);
+
+  for (size_t i = 0; i < count; ++i)
+  {
+    json_t * item = json_array_get(arr, i);
+    TransitId id = 0;
+    FromJSON(item, id);
+    stopIds.emplace_back(id);
+  }
+
+  return stopIds;
+}
+
+std::vector<LineInterval> GetIntervalsFromJson(json_t * obj)
+{
+  json_t * arr = base::GetJSONObligatoryField(obj, "intervals");
+  CHECK(json_is_array(arr), ());
+
+  std::vector<LineInterval> intervals;
+  size_t const count = json_array_size(arr);
+  intervals.reserve(count);
+
+  for (size_t i = 0; i < count; ++i)
+  {
+    json_t * item = json_array_get(arr, i);
+    CHECK(json_is_object(item), ());
+
+    LineInterval interval;
+    FromJSONObject(item, "interval_s", interval.m_headwayS);
+
+    std::string serviceHoursStr;
+    FromJSONObject(item, "service_hours", serviceHoursStr);
+    interval.m_timeIntervals = osmoh::OpeningHours(serviceHoursStr);
+    intervals.emplace_back(interval);
+  }
+
+  return intervals;
+}
+
+m2::PointD GetPointFromJson(json_t * obj)
+{
+  CHECK(json_is_object(obj), ());
+
+  m2::PointD point;
+  FromJSONObject(obj, "x", point.x);
+  FromJSONObject(obj, "y", point.y);
+  return point;
+}
+
+std::vector<m2::PointD> GetPointsFromJson(json_t * obj)
+{
+  json_t * arr = base::GetJSONObligatoryField(obj, "points");
+  CHECK(json_is_array(arr), ());
+
+  std::vector<m2::PointD> points;
+  size_t const count = json_array_size(arr);
+  points.reserve(count);
+
+  for (size_t i = 0; i < count; ++i)
+  {
+    json_t * item = json_array_get(arr, i);
+    points.emplace_back(GetPointFromJson(item));
+  }
+
+  return points;
+}
+
+TimeTable GetTimeTableFromJson(json_t * obj)
+{
+  json_t * arr = base::GetJSONObligatoryField(obj, "timetable");
+  CHECK(json_is_array(arr), ());
+
+  TimeTable timetable;
+  bool inserted = false;
+
+  for (size_t i = 0; i < json_array_size(arr); ++i)
+  {
+    json_t * item = json_array_get(arr, i);
+    CHECK(json_is_object(item), ());
+
+    TransitId lineId;
+    std::string arrivalsStr;
+    FromJSONObject(item, "line_id", lineId);
+    FromJSONObject(item, "arrivals", arrivalsStr);
+
+    osmoh::OpeningHours arrivals(arrivalsStr);
+    std::tie(std::ignore, inserted) = timetable.emplace(lineId, arrivals);
+    CHECK(inserted, ());
+  }
+
+  return timetable;
+}
+
+Translations GetTranslationsFromJson(json_t * obj, std::string const & field)
+{
+  json_t * arr = base::GetJSONObligatoryField(obj, field);
+  CHECK(json_is_array(arr), ());
+  Translations translations;
+
+  bool inserted = false;
+
+  for (size_t i = 0; i < json_array_size(arr); ++i)
+  {
+    json_t * item = json_array_get(arr, i);
+    CHECK(json_is_object(item), ());
+    std::string lang;
+    std::string text;
+    FromJSONObject(item, "lang", lang);
+    FromJSONObject(item, "text", text);
+    std::tie(std::ignore, inserted) = translations.emplace(lang, text);
+    CHECK(inserted, ());
+  }
+
+  return translations;
+}
+
+ShapeLink GetShapeLinkFromJson(json_t * obj)
+{
+  json_t * shapeLinkObj = base::GetJSONObligatoryField(obj, "shape");
+  CHECK(json_is_object(shapeLinkObj), ());
+
+  ShapeLink shapeLink;
+  FromJSONObject(shapeLinkObj, "id", shapeLink.m_shapeId);
+  FromJSONObject(shapeLinkObj, "start_index", shapeLink.m_startIndex);
+  FromJSONObject(shapeLinkObj, "end_index", shapeLink.m_endIndex);
+
+  return shapeLink;
+}
+
+void Networks::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+  Translations const translations = GetTranslationsFromJson(obj.get(), "title");
+  InsertWithCheck(m_data, id, translations);
+}
+
 void Networks::Write(std::ofstream & stream) const
 {
   for (auto const & [networkId, networkTitle] : m_data)
@@ -1152,6 +1376,19 @@ void Networks::Write(std::ofstream & stream) const
 
     WriteJson(node.get(), stream);
   }
+}
+
+void Routes::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+
+  RouteData data;
+  FromJSONObject(obj.get(), "network_id", data.m_networkId);
+  FromJSONObject(obj.get(), "color", data.m_color);
+  FromJSONObject(obj.get(), "type", data.m_routeType);
+  data.m_title = GetTranslationsFromJson(obj.get(), "title");
+
+  InsertWithCheck(m_data, id, data);
 }
 
 void Routes::Write(std::ofstream & stream) const
@@ -1167,6 +1404,24 @@ void Routes::Write(std::ofstream & stream) const
 
     WriteJson(node.get(), stream);
   }
+}
+
+void Lines::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+
+  LineData data;
+  FromJSONObject(obj.get(), "route_id", data.m_routeId);
+  data.m_shapeLink = GetShapeLinkFromJson(obj.get());
+  data.m_title = GetTranslationsFromJson(obj.get(), "title");
+  data.m_stopIds = GetStopIdsFromJson(obj.get());
+
+  std::string serviceDaysStr;
+  FromJSONObject(obj.get(), "service_days", serviceDaysStr);
+  data.m_serviceDays = osmoh::OpeningHours(serviceDaysStr);
+  data.m_intervals = GetIntervalsFromJson(obj.get());
+
+  InsertWithCheck(m_data, id, data);
 }
 
 void Lines::Write(std::ofstream & stream) const
@@ -1193,9 +1448,16 @@ void Lines::Write(std::ofstream & stream) const
     }
 
     json_object_set_new(node.get(), "intervals", intervalsArr.release());
-
     WriteJson(node.get(), stream);
   }
+}
+
+void Shapes::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+  ShapeData data;
+  data.m_points = GetPointsFromJson(obj.get());
+  InsertWithCheck(m_data, id, data);
 }
 
 void Shapes::Write(std::ofstream & stream) const
@@ -1210,9 +1472,20 @@ void Shapes::Write(std::ofstream & stream) const
       json_array_append_new(pointsArr.get(), PointToJson(point).release());
 
     json_object_set_new(node.get(), "points", pointsArr.release());
-
     WriteJson(node.get(), stream);
   }
+}
+
+void Stops::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+
+  StopData data;
+  json_t * item = base::GetJSONObligatoryField(obj.get(), "point");
+  data.m_point = GetPointFromJson(item);
+  data.m_title = GetTranslationsFromJson(obj.get(), "title");
+  data.m_timetable = GetTimeTableFromJson(obj.get());
+  InsertWithCheck(m_data, id, data);
 }
 
 void Stops::Write(std::ofstream & stream) const
@@ -1240,6 +1513,21 @@ void Stops::Write(std::ofstream & stream) const
   }
 }
 
+void Edges::Read(base::Json const & obj)
+{
+  EdgeId edgeId;
+
+  FromJSONObject(obj.get(), "line_id", edgeId.m_lineId);
+  FromJSONObject(obj.get(), "stop_id_from", edgeId.m_fromStopId);
+  FromJSONObject(obj.get(), "stop_id_to", edgeId.m_toStopId);
+
+  EdgeData data;
+  data.m_shapeLink = GetShapeLinkFromJson(obj.get());
+  FromJSONObject(obj.get(), "weight", data.m_weight);
+
+  InsertWithCheck(m_data, edgeId, data);
+}
+
 void Edges::Write(std::ofstream & stream) const
 {
   for (auto const & [edgeId, edge] : m_data)
@@ -1256,6 +1544,15 @@ void Edges::Write(std::ofstream & stream) const
   }
 }
 
+void EdgesTransfer::Read(base::Json const & obj)
+{
+  EdgeTransferData data;
+  FromJSONObject(obj.get(), "stop_id_from", data.m_fromStopId);
+  FromJSONObject(obj.get(), "stop_id_to", data.m_toStopId);
+  FromJSONObject(obj.get(), "weight", data.m_weight);
+  m_data.insert(data);
+}
+
 void EdgesTransfer::Write(std::ofstream & stream) const
 {
   for (auto const & edge : m_data)
@@ -1270,6 +1567,15 @@ void EdgesTransfer::Write(std::ofstream & stream) const
   }
 }
 
+void Transfers::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+  TransferData data;
+  data.m_point = GetPointFromJson(base::GetJSONObligatoryField(obj.get(), "point"));
+  data.m_stopsIds = GetStopIdsFromJson(obj.get());
+  InsertWithCheck(m_data, id, data);
+}
+
 void Transfers::Write(std::ofstream & stream) const
 {
   for (auto const & [transferId, transfer] : m_data)
@@ -1282,6 +1588,17 @@ void Transfers::Write(std::ofstream & stream) const
 
     WriteJson(node.get(), stream);
   }
+}
+
+void Gates::Read(base::Json const & obj)
+{
+  TransitId const id = GetIdFromJson(obj.get());
+  GateData data;
+  data.m_weights = GetWeightsFromJson(obj.get());
+  FromJSONObject(obj.get(), "exit", data.m_isExit);
+  FromJSONObject(obj.get(), "entrance", data.m_isEntrance);
+  data.m_point = GetPointFromJson(base::GetJSONObligatoryField(obj.get(), "point"));
+  InsertWithCheck(m_data, id, data);
 }
 
 void Gates::Write(std::ofstream & stream) const
@@ -1335,10 +1652,41 @@ bool WorldFeed::Save(std::string const & worldFeedDir, bool overwrite)
   CHECK(DumpData(m_shapes, base::JoinPath(worldFeedDir, kShapesFile), overwrite), ());
   CHECK(DumpData(m_stops, base::JoinPath(worldFeedDir, kStopsFile), overwrite), ());
   CHECK(DumpData(m_edges, base::JoinPath(worldFeedDir, kEdgesFile), overwrite), ());
-  CHECK(DumpData(m_edgesTransfers, base::JoinPath(worldFeedDir, kEdgesTransferFile), overwrite),
-        ());
+  CHECK(DumpData(m_edgesTransfer, base::JoinPath(worldFeedDir, kEdgesTransferFile), overwrite), ());
   CHECK(DumpData(m_transfers, base::JoinPath(worldFeedDir, kTransfersFile), overwrite), ());
   CHECK(DumpData(m_gates, base::JoinPath(worldFeedDir, kGatesFile), overwrite), ());
+
+  return true;
+}
+
+bool WorldFeed::Load(std::string const & worldFeedDir)
+{
+  if (!ReadData(m_networks, base::JoinPath(worldFeedDir, kNetworksFile)))
+    return false;
+
+  if (!ReadData(m_routes, base::JoinPath(worldFeedDir, kRoutesFile)))
+    return false;
+
+  if (!ReadData(m_lines, base::JoinPath(worldFeedDir, kLinesFile)))
+    return false;
+
+  if (!ReadData(m_shapes, base::JoinPath(worldFeedDir, kShapesFile)))
+    return false;
+
+  if (!ReadData(m_stops, base::JoinPath(worldFeedDir, kStopsFile)))
+    return false;
+
+  if (!ReadData(m_edges, base::JoinPath(worldFeedDir, kEdgesFile)))
+    return false;
+
+  if (!ReadData(m_edgesTransfer, base::JoinPath(worldFeedDir, kEdgesTransferFile)))
+    LOG(LWARNING, ("Empty edges transfer:", kEdgesTransferFile));
+
+  if (!ReadData(m_transfers, base::JoinPath(worldFeedDir, kTransfersFile)))
+    LOG(LWARNING, ("Empty transfers:", kTransfersFile));
+
+  if (!ReadData(m_gates, base::JoinPath(worldFeedDir, kGatesFile)))
+    LOG(LWARNING, ("Empty gates:", kGatesFile));
 
   return true;
 }

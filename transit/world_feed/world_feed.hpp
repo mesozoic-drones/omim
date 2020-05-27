@@ -4,6 +4,8 @@
 #include "geometry/mercator.hpp"
 #include "geometry/point2d.hpp"
 
+#include "defines.hpp"
+
 #include <cstdint>
 #include <fstream>
 #include <set>
@@ -12,10 +14,9 @@
 #include <unordered_set>
 #include <vector>
 
+#include "3party/jansson/myjansson.hpp"
 #include "3party/just_gtfs/just_gtfs.h"
 #include "3party/opening_hours/opening_hours.hpp"
-
-#include "defines.hpp"
 
 namespace transit
 {
@@ -41,6 +42,7 @@ using TransitId = uint32_t;
 class IdGenerator
 {
 public:
+  IdGenerator() = default;
   explicit IdGenerator(std::string const & idMappingPath);
   void Save();
 
@@ -60,6 +62,7 @@ using Translations = std::unordered_map<std::string, std::string>;
 
 struct Networks
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   // Id to agency name mapping.
@@ -76,6 +79,7 @@ struct RouteData
 
 struct Routes
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<TransitId, RouteData> m_data;
@@ -120,6 +124,7 @@ struct LineData
 
 struct Lines
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<TransitId, LineData> m_data;
@@ -131,16 +136,20 @@ struct ShapeData
   explicit ShapeData(std::vector<m2::PointD> const & points);
 
   std::vector<m2::PointD> m_points;
+
   // Field not for dumping to json:
   std::unordered_set<TransitId> m_lineIds;
 };
 
 struct Shapes
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<TransitId, ShapeData> m_data;
 };
+
+using TimeTable = std::unordered_map<TransitId, osmoh::OpeningHours>;
 
 struct StopData
 {
@@ -149,7 +158,7 @@ struct StopData
   m2::PointD m_point;
   Translations m_title;
   // For each line id there is a schedule.
-  std::unordered_map<TransitId, osmoh::OpeningHours> m_timetable;
+  TimeTable m_timetable;
 
   // Field not intended for dumping to json:
   std::string m_gtfsParentId;
@@ -157,6 +166,7 @@ struct StopData
 
 struct Stops
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<TransitId, StopData> m_data;
@@ -187,6 +197,7 @@ struct EdgeData
 
 struct Edges
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<EdgeId, EdgeData, EdgeIdHasher> m_data;
@@ -203,6 +214,7 @@ bool operator<(EdgeTransferData const & d1, EdgeTransferData const & d2);
 
 struct EdgesTransfer
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::set<EdgeTransferData> m_data;
@@ -216,6 +228,7 @@ struct TransferData
 
 struct Transfers
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<TransitId, TransferData> m_data;
@@ -240,6 +253,7 @@ struct GateData
 
 struct Gates
 {
+  void Read(base::Json const & obj);
   void Write(std::ofstream & stream) const;
 
   std::unordered_map<TransitId, GateData> m_data;
@@ -277,8 +291,9 @@ public:
   // Transforms GTFS feed into the global feed.
   bool SetFeed(gtfs::Feed && feed);
 
-  // Dumps global feed to |world_feed_path|.
+  // Dumps global feed to |worldFeedDir|.
   bool Save(std::string const & worldFeedDir, bool overwrite);
+  bool Load(std::string const & worldFeedDir);
 
   inline static size_t GetCorruptedStopSequenceCount() { return m_badStopSeqCount; }
 
@@ -341,7 +356,7 @@ private:
   Shapes m_shapes;
   Stops m_stops;
   Edges m_edges;
-  EdgesTransfer m_edgesTransfers;
+  EdgesTransfer m_edgesTransfer;
   Transfers m_transfers;
   Gates m_gates;
 
