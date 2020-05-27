@@ -13,6 +13,7 @@ omim_add_executable(${PROJECT_NAME} ${SRC})
 omim_link_libraries(
   ${PROJECT_NAME}
   generator
+  world_feed
   routing
   traffic
   routing_common
