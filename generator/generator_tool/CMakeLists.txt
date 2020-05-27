@@ -13,7 +13,6 @@ omim_add_executable(${PROJECT_NAME} ${SRC})
 omim_link_libraries(
   ${PROJECT_NAME}
   generator
-  world_feed
   routing
   traffic
   routing_common
@@ -29,6 +28,7 @@ omim_link_libraries(
   geometry
   coding
   base
+  world_feed
   opening_hours
   freetype
   expat
