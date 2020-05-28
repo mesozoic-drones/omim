@@ -14,9 +14,9 @@ omim_link_libraries(
   ${PROJECT_NAME}
   generator
   world_feed
-        drape_frontend
-        drape
-        shaders
+  drape_frontend
+  drape
+  shaders
   routing
   traffic
   routing_common
@@ -47,13 +47,12 @@ omim_link_libraries(
   gflags
   oauthcpp
   sqlite3
-        stb_image
-        sdf_image
-        vulkan_wrapper
+  stb_image
+  sdf_image
+  vulkan_wrapper
   ${CMAKE_DL_LIBS}
   ${LIBZ}
 )
-
 
 link_opengl(${PROJECT_NAME})
 link_qt5_core(${PROJECT_NAME})
