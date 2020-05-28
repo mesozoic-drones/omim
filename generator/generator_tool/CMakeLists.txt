@@ -15,6 +15,7 @@ omim_link_libraries(
   generator
   world_feed
         drape_frontend
+        drape
         shaders
   routing
   traffic
