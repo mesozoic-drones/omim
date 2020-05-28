@@ -13,6 +13,9 @@ omim_add_executable(${PROJECT_NAME} ${SRC})
 omim_link_libraries(
   ${PROJECT_NAME}
   generator
+  world_feed
+        drape_frontend
+        shaders
   routing
   traffic
   routing_common
@@ -28,7 +31,6 @@ omim_link_libraries(
   geometry
   coding
   base
-  world_feed
   opening_hours
   freetype
   expat
@@ -44,9 +46,14 @@ omim_link_libraries(
   gflags
   oauthcpp
   sqlite3
+        stb_image
+        sdf_image
+        vulkan_wrapper
   ${CMAKE_DL_LIBS}
   ${LIBZ}
 )
 
+
+link_opengl(${PROJECT_NAME})
 link_qt5_core(${PROJECT_NAME})
 link_qt5_network(${PROJECT_NAME})
