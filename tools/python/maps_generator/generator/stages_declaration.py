@@ -263,8 +263,7 @@ class StageRouting(Stage):
 
 
 @country_stage
-@depends_from_internal(D(settings.SUBWAY_URL, PathProvider.subway_path),
-                       D(settings.TRANSIT_URL, PathProvider.transit_path_experimental))
+@depends_from_internal(D(settings.SUBWAY_URL, PathProvider.subway_path))
 class StageRoutingTransit(Stage):
     def apply(self, env: Env, country, **kwargs):
         steps.step_routing_transit(env, country, **kwargs)
