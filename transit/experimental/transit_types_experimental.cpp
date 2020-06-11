@@ -23,6 +23,33 @@ std::string GetTranslation(Translations const & titles)
   return titles.begin()->second;
 }
 
+// TransitHeader ----------------------------------------------------------------------------------
+TransitHeader::TransitHeader(uint16_t version, uint32_t stopsOffset, uint32_t gatesOffset,
+                             uint32_t edgesOffset, uint32_t transfersOffset, uint32_t linesOffset,
+                             uint32_t shapesOffset, uint32_t routesOffset, uint32_t networksOffset,
+                             uint32_t endOffset)
+  : m_version(version)
+  , m_reserve(0)
+  , m_stopsOffset(stopsOffset)
+  , m_gatesOffset(gatesOffset)
+  , m_edgesOffset(edgesOffset)
+  , m_transfersOffset(transfersOffset)
+  , m_linesOffset(linesOffset)
+  , m_shapesOffset(shapesOffset)
+  , m_routesOffset(routesOffset)
+  , m_networksOffset(networksOffset)
+  , m_endOffset(endOffset)
+{
+}
+
+bool TransitHeader::IsValid() const
+{
+  return std::tie(m_stopsOffset, m_gatesOffset, m_transfersOffset, m_linesOffset, m_shapesOffset,
+                  m_routesOffset, m_networksOffset) <=
+         std::tie(m_gatesOffset, m_transfersOffset, m_linesOffset, m_shapesOffset, m_routesOffset,
+                  m_networksOffset, m_endOffset);
+}
+
 // SingleMwmSegment --------------------------------------------------------------------------------
 SingleMwmSegment::SingleMwmSegment(FeatureId featureId, uint32_t segmentIdx, bool forward)
   : m_featureId(featureId), m_segmentIdx(segmentIdx), m_forward(forward)
@@ -204,6 +231,16 @@ TimeTable const & Stop::GetTimeTable() const { return m_timetable; }
 
 m2::PointD const & Stop::GetPoint() const { return m_point; }
 
+void Stop::SetBestPedestrianSegments(std::vector<SingleMwmSegment> const & seg)
+{
+  m_bestPedestrianSegments = seg;
+}
+
+std::vector<SingleMwmSegment> const & Stop::GetBestPedestrianSegments() const
+{
+  return m_bestPedestrianSegments;
+}
+
 // Gate --------------------------------------------------------------------------------------------
 Gate::Gate() : m_ids(false /* serializeFeatureIdOnly */) {}
 
@@ -236,13 +273,19 @@ bool Gate::IsValid() const
          (m_entrance || m_exit) && !m_weights.empty();
 }
 
-void Gate::SetBestPedestrianSegment(SingleMwmSegment const & s) { m_bestPedestrianSegment = s; };
+void Gate::SetBestPedestrianSegments(std::vector<SingleMwmSegment> const & seg)
+{
+  m_bestPedestrianSegments = seg;
+};
 
 FeatureId Gate::GetFeatureId() const { return m_ids.GetFeatureId(); }
 
 OsmId Gate::GetOsmId() const { return m_ids.GetOsmId(); }
 
-SingleMwmSegment const & Gate::GetBestPedestrianSegment() const { return m_bestPedestrianSegment; }
+std::vector<SingleMwmSegment> const & Gate::GetBestPedestrianSegments() const
+{
+  return m_bestPedestrianSegments;
+}
 
 bool Gate::IsEntrance() const { return m_entrance; }
 
