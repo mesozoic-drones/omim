@@ -528,7 +528,7 @@ void TransitData::DeserializeForCrossMwm(Reader & reader)
 
 void TransitData::Clear()
 {
-  ClearVisitor const visitor{};
+  ClearVisitor const visitor;
   Visit(visitor);
 }
 
@@ -559,7 +559,7 @@ bool TransitData::IsEmpty() const
 
 void TransitData::Sort()
 {
-  SortVisitor const visitor{};
+  SortVisitor const visitor;
   Visit(visitor);
 }
 
