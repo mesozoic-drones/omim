@@ -129,7 +129,7 @@ public:
       id.Visit(*this);
   }
 
-  void operator()(osmoh::OpeningHours const & oh, char const * name = nullptr)
+  void operator()(osmoh::OpeningHours const & oh, char const * /* name */ = nullptr)
   {
     (*this)(ToString(oh));
   }
@@ -363,7 +363,7 @@ public:
     }
   }
 
-  void operator()(osmoh::OpeningHours & oh, char const * name = nullptr)
+  void operator()(osmoh::OpeningHours & oh, char const * /* name */ = nullptr)
   {
     std::string ohStr;
     (*this)(ohStr);

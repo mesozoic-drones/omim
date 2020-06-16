@@ -24,24 +24,6 @@ std::string GetTranslation(Translations const & titles)
 }
 
 // TransitHeader ----------------------------------------------------------------------------------
-TransitHeader::TransitHeader(uint16_t version, uint32_t stopsOffset, uint32_t gatesOffset,
-                             uint32_t edgesOffset, uint32_t transfersOffset, uint32_t linesOffset,
-                             uint32_t shapesOffset, uint32_t routesOffset, uint32_t networksOffset,
-                             uint32_t endOffset)
-  : m_version(version)
-  , m_reserve(0)
-  , m_stopsOffset(stopsOffset)
-  , m_gatesOffset(gatesOffset)
-  , m_edgesOffset(edgesOffset)
-  , m_transfersOffset(transfersOffset)
-  , m_linesOffset(linesOffset)
-  , m_shapesOffset(shapesOffset)
-  , m_routesOffset(routesOffset)
-  , m_networksOffset(networksOffset)
-  , m_endOffset(endOffset)
-{
-}
-
 bool TransitHeader::IsValid() const
 {
   return std::tie(m_stopsOffset, m_gatesOffset, m_transfersOffset, m_linesOffset, m_shapesOffset,

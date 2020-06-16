@@ -50,7 +50,7 @@ struct SortVisitor
 struct CheckValidVisitor
 {
   template <class C>
-  void operator()(C const & container, char const * entityName)
+  void operator()(C const & container, char const * entityName) const
   {
     for (auto const & item : container)
       CHECK(item.IsValid(), (item, "is not valid in", entityName));
@@ -60,7 +60,7 @@ struct CheckValidVisitor
 struct CheckUniqueVisitor
 {
   template <class C>
-  void operator()(C const & container, char const * entityName)
+  void operator()(C const & container, char const * entityName) const
   {
     auto const it = std::adjacent_find(container.begin(), container.end());
     CHECK(it == container.end(), (*it, "is not unique in", entityName));
@@ -70,7 +70,7 @@ struct CheckUniqueVisitor
 struct CheckSortedVisitor
 {
   template <typename C>
-  void operator()(C const & container, char const * entityName)
+  void operator()(C const & container, char const * entityName) const
   {
     CHECK(std::is_sorted(container.begin(), container.end()), (entityName, "is not sorted."));
   }
@@ -439,10 +439,10 @@ void TransitData::Serialize(Writer & writer)
   auto const startOffset = writer.Pos();
 
   routing::transit::Serializer<Writer> serializer(writer);
-  routing::transit::FixedSizeSerializer<Writer> numberSerializer(writer);
+  routing::transit::FixedSizeSerializer<Writer> fixedSizeSerializer(writer);
   m_header = TransitHeader();
   m_header.m_version = kExperimentalTransitVersion;
-  numberSerializer(m_header);
+  fixedSizeSerializer(m_header);
 
   m_header.m_stopsOffset = base::checked_cast<uint32_t>(writer.Pos() - startOffset);
   serializer(m_stops);
@@ -474,7 +474,7 @@ void TransitData::Serialize(Writer & writer)
   CHECK(m_header.IsValid(), (m_header));
   auto const endOffset = writer.Pos();
   writer.Seek(startOffset);
-  numberSerializer(m_header);
+  fixedSizeSerializer(m_header);
   writer.Seek(endOffset);
 
   LOG(LINFO, (TRANSIT_FILE_TAG, "experimental section is ready. Header:", m_header));
@@ -579,8 +579,8 @@ void TransitData::SetStopPedestrianSegments(size_t stopIdx,
 
 void TransitData::ReadHeader(NonOwningReaderSource & src)
 {
-  routing::transit::FixedSizeDeserializer<NonOwningReaderSource> numberDeserializer(src);
-  numberDeserializer(m_header);
+  routing::transit::FixedSizeDeserializer<NonOwningReaderSource> fixedSizeDeserializer(src);
+  fixedSizeDeserializer(m_header);
   CHECK_EQUAL(src.Pos(), m_header.m_stopsOffset, ("Wrong", TRANSIT_FILE_TAG, "section format."));
   CHECK(m_header.IsValid(), ());
 }

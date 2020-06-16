@@ -40,7 +40,7 @@ namespace transit
 {
 namespace experimental
 {
-constexpr uint16_t kExperimentalTransitVersion = 1;
+constexpr uint16_t kExperimentalTransitVersion = 2;
 
 #define DECLARE_TRANSIT_TYPES_FRIENDS                 \
   template <class Sink>                               \
@@ -110,9 +110,6 @@ private:
 struct TransitHeader
 {
   TransitHeader() = default;
-  TransitHeader(uint16_t version, uint32_t stopsOffset, uint32_t gatesOffset, uint32_t edgesOffset,
-                uint32_t transfersOffset, uint32_t linesOffset, uint32_t shapesOffset,
-                uint32_t routesOffset, uint32_t networksOffset, uint32_t endOffset);
 
   bool IsValid() const;
 
